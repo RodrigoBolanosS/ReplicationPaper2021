@@ -1,0 +1,1301 @@
+---
+title: "GRAD-C6-2001: Statistics II — Replication Paper"
+subtitle: "Replication Paper </br> Ares & Hernandez (2018), The corrosive effect on trust in politicians: Evidence from a natural experiment- Research & Politics"
+author: "RodrigoBolanosS"
+date: "`r format(Sys.time(), '%B %d, %Y | %H:%M:%S | %Z')`"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    highlight: tango
+    theme: cosmo
+    toc: yes
+    toc_float: yes
+---
+  
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      eval = TRUE,
+                      error = FALSE,
+                      message = FALSE,
+                      warning = FALSE,
+                      fig.align = "center")
+```
+
+<!-- Do not forget to input the title of the paper, as well as your name and Github username in the YAML configuration up there --> 
+
+***
+
+```{r, include = F}
+
+rm(list = ls())
+cat("\014") #for clearing console
+check.packages <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg))
+    install.packages(new.pkg, dependencies = TRUE,
+                     repos = "https://cran.rstudio.com")
+  sapply(pkg, require, character.only = TRUE)
+}
+#installing the packages 
+check.packages(c("tidyverse", "ggdag", "dagitty","broom", "janitor", "stargazer", "readr","rdrobust", "lmtest","kableExtra","plm","lubridate","KernSmooth","ggplot2","MatchIt", "randomizr"))
+
+
+
+set.seed(75) 
+```
+
+# Fact Sheet - Summary, data, and methodology
+
+## Motivation and hypotheses
+
+<div class = "answer">
+
+The paper main topic is about exploring what is the relationship between the effects of corruption and political attitudes of citizens. In particular, the authors explore three hypothesis. </br>
+
+First, that the exposure to relevant corruption cases diminishes trust in politicians (H1). This is because individuals normally base their political attitudes on "top-of-the-head" manner and a scandal may reduce their trust on politicians. </br>.  
+ 
+The second hypothesis follows naturally from the above (H2). If citizens base their decisions on what they are thinking at the moment, then the impact of corruption scandals will fade out after a certain time have passed. </br>
+ 
+The third and last hypothesis the authors test is that this negative effects of corruption will be lesser among those individuals who feel closer to the party, since they will attribute it lower importance (H3).</br>
+
+</div> 
+
+## Data
+
+<div class = "answer">
+
+The authors use the next databases: </br>
+- Google trends for the search 'caso barcenas' in Spain.</br>
+- European Social Survey (2014). ESS Round 6 (2012/2013). </br>
+--- Spanish and Danish subsets </br>
+- European Social Survey (2016). ESS Round 6 (2014/2015) </br>
+--- Spanish subset </br>
+
+
+</div> 
+ 
+## Empirical Strategy and DAG
+ 
+<div class = "answer">
+ 
+To test the three hypothesis above, the authors use a natural experiment regarding the Barcenas case. This is that, due to the fact that fieldwork of the European Social Survey and the scandal coincided in time, it is possible to use the day of the interview as the as-if random mechanism to define who is treated and who is not.</br>
+
+Having done this, they proceed to do a series of ordinary least squares models, in which the independent variable is trust in politicians and the dependent the exposure to the Barcenas Case. When needed, the authors control for other relevant covariates, such as who they voted for, gender or region and their interaction.</br>
+
+In particular, to test for the second hypothesis the authors leave constant who are those that are in the control group (all those interviewed before January 31) but variate those in the treatment group. This way they first consider those treated only those in the first week, afterwards all of those interviewed also 5 days after, and so on. </br>
+
+It is important to note that these models are not a proper regression discontinuity since the authors use the whole range of data across time, in which the exposure to the Barcenas case is only a dummy. A true RDD would consider the difference in trust around the cutoff (being exposed or not) and the running variable would be time before/after the scandal.</br>
+
+</div> 
+
+### DAG
+
+```{r}
+
+coord_dag<-list(x=c(z=1,d=2,u1=3,u2=3,y=4),
+               y=c(z=0,d=0,y=0,u1=1,u2=-1))
+
+labels_a = c("z" = "Time of interview ", 
+                  "d" = "Exposure to Barcenas Case",
+                  "y" = "Trust in politicians",
+                  "u1" = "Education \n Age \n Gender \n Election Winner",
+                  "u2" = "Type of employment \n Region")
+
+corruption_theory <- ggdag::dagify(y~d,
+                                 y~u1,
+                                 y~u2,
+                                 d~u1,
+                                 d~z,
+                                 d~u2,
+                                 z~u2, labels=labels_a,coords=coord_dag,
+                                 exposure="d", outcome="y") 
+ 
+
+
+
+ggdag::ggdag(corruption_theory, use_labels = "label", stylized = TRUE, node_size = 20, text_size = 2.8)+theme_void()
+
+
+```
+
+## Findings
+
+<div class = "answer">
+
+The findings for each of the hypotheses are the next: 
+
+- <b> H1 </b>. The authors find that exposure to the Barcenas case diminishes trust in -0.483. 
+- <b> H2 </b>. Controlling for different covariates, as well as by regional fixed effects, the authors find that as time passes the corruption scandal effectively fades away.  In fact, for the last three weeks they the coefficients become statistically insignificant. 
+- <b> H3 </b>. The authors find that voting for PP does compensate the negative effect of being exposed to the Barcenas scandal. However, when interacting both this becomes statistically insignificant. 
+
+
+</div> 
+
+## Robustness checks
+
+<div class = "answer">
+
+The authors also do some robustness checks to reduce the threats to the different assumptions needed. For example, to evaluate against potential biases to the ignorability assumption the authors include a variable about how many times the individual declined the survey after being contacted. Also since some regions were only surveyed after the Barcenas case, some of these do not include a control group to compare against for. In this respect, they re-estimate the models for only those regions in which there are the two types of individuals. </br> 
+
+On the same vein, as a way to check that the change in trust in politicians is only affected by the Barcenas case, they run one thousand place events to mimic the scandal.  This way they find that only 4.8% of tese simulations produce a negative effect similar to Barcenas'. </br>  
+
+Also, to be sure that the authors' findings are not driven only because of seasonality issues or timing of the ESS, they replicate the analysis with the ESS 7. In this way, they estimate the impact of a fictitious event that also happens on January 31.  They find that there is no effect of this simulated event on trust. Similarly, as a way to set a counterfactual of the ESS in Spain, they compare the effect of the Barcenas Scandal on trust in politicians in Denmark (no impact). </br> 
+
+Finally, they also use alternative methods such as matching, entropy balances and regression discontinuities to estimate the effects of the scandals. </br> 
+
+</div>
+
+## Criticism
+
+<div class = "answer">
+
+There are several flaws with respect to the above models that may bias the results or even violate the basic assumptions needed to have trustworthy results.  In particular:
+
+1. <b>Defining January 31st as the cutoff to define those treated</b>. The fact that the Barcenas case appeared first on El Mundo on January 18, violates the exclusion restriction assumption. This is, that is very likely the trust of some of the individuals was already affected by the appearance of the news beforehand. Therefore the outcome is not only affected by the treated variable. </br> 
+2. <b> Considering those that do not vote as if they had voted against PP </b>. The authors categorize all those who did not manifest explicitly for whom they voted as if they had voted against the PP. This is a very strong assumption that biases that models. In fact, when omitting these individuals from the regression models, the estimates become statistically not significant (see code, results not published here). </br> 
+3. <b> Failing to control for general trends in trust </b>. According to Muñoz Mendoza, J., Falcó Gimeno, A., & Hernández, E. (2019)., another threat to the exclusion restriction assumption is failing to consider that the variable of interest may have a trend. In this case, there might be long-term trends in trust that might be driving the results (disregarding the corruption scandal). In this same aspect, it is important to say that there may be several factors that also define trends in trust such as religion, GDP, population size, among many others (Bjørnskov, C, 2007) </br> 
+4. <b> Treatment group arbitrariety and possible self-selection</b>.  The authors make a very strong assumption: they assume that each individual after January 31 will necessary be aware and affected by the corruption scandal. However this is very unlikely and it is in fact probable that there are individuals who do not know about it. In this regard, there are also many covariates that make a certain individual more probably to be aware of this type of events such as education, age, or background.
+
+
+</div>
+
+
+
+# Replication - From trends to discontinuities
+
+## Figure 1. Google trends
+
+```{r}
+
+#Before loading the CSV, I manually edited the text file to delete the first empty line and adjust variable names
+trends_df <- readr::read_csv("CasoBarcenas_df.csv")
+
+##ggplot to create the trend line
+ggplot(trends_df, aes(x = Date)) +
+ geom_line(aes(x = Date, 
+                y= Searches), color="dark blue") +
+  geom_vline(xintercept =as.numeric(as.Date("2013-01-31")), linetype = "dotted", color = "red") + ## to draw the vline I need to convert twice the format (Date,numeric)
+  theme(legend.position = "bottom") +
+  labs(title = "Figure 1. Google trends for the search 'caso barcenas'",
+       x = "Month",
+       y = "Relative Google searches",
+       caption = "Red dashed line indicates January 31st")+
+  theme_minimal()
+
+
+```
+<div class = "answer">
+
+Figure 1 clearly shows that there was a spike in the number of searches on January 31st, when El País leaked the internal documents that revealed the corruption scheme.  It is important to note however, that there was also a spike on the days previous to this publication a fact that may represent a risk to the assumptions to identify causality, as I will explain further in later sections. 
+
+</div>
+
+## Table 2. OLS regression models.
+
+<div class = "answer">
+
+The table below tests the hypothesis of how corruption affects trust in politicians. This is done by three lineal models. The first, is a simple regression in which the independent variable is the exposure to the Bárcenas scandal. An individual is considered exposed if it was interviewed after January 31. The second adds a variable whether the individual voted for the Partido Popular or not, its employment, years of education, gender, their employment status, and the region of Spain in which they live. The last model, uses these same variables but interacts the voting variable with exposure to the corruption case.
+
+</div>
+
+```{r}
+
+spain_df<-haven::read_dta("ess_6_spain.dta") #loading the database
+
+#creating the variable of exposure to the Barcenas' case, only those interviewed on or after January 31 are considered exposed to the case. Also, all of those individuals interviewed after February are disregarded. 
+spain_df<-spain_df %>%
+  mutate(d_exposure_barcenas = dplyr::case_when(inwmms == 1 & inwdds < 31 & inwmms <=2  ~ 0,
+                                                inwmms >1 & inwmms <=2 ~ 1,
+                                                inwmms ==1 & inwdds == 31 & inwmms <=2 ~ 1
+                                                )) %>%
+  mutate(d_exposure_barcenas=ifelse(inwmms>2,NA,d_exposure_barcenas))
+
+
+#create employment variable.
+spain_df<-spain_df %>% 
+  mutate(mnactic=dplyr::case_when(mnactic== 4 ~3,
+                                  mnactic== 6 ~5,
+                                  mnactic== 8 ~5,
+                                  TRUE ~ as.numeric(mnactic)))%>% 
+  mutate(employment=mnactic) #Some of the categories are grouped together
+
+
+#Making an employment variable that is categorical
+spain_df<-spain_df %>% 
+  mutate(f_employment=factor(case_when(employment==1 ~ "Paid Work",
+                                       employment==2 ~ "In education",
+                                       employment==3 ~ "Unemployed",
+                                       employment==5 ~ "Out Of labor market",
+                                       employment== 9 ~ "Other")))
+
+
+#setting paid work individuals as the baseline         
+spain_df$f_employment<-relevel(spain_df$f_employment,ref="Paid Work")
+
+
+#creating an election dummy-type variable in which those who vote for the PP
+#are assigned a 1 and 0 otherwise
+spain_df<-spain_df %>% 
+  mutate(party_voted=as.factor(prtvtces))
+
+spain_df<-spain_df %>% 
+  mutate(election_winner=ifelse(party_voted==1,1,0))  
+
+spain_df<-spain_df %>%
+  mutate(election_winner_alt=election_winner) #this is just for me
+
+spain_df<-spain_df %>% 
+  mutate(election_winner=ifelse(is.na(election_winner),0,election_winner)) # all individuals who have a null value of vote are automatically assigned as if they had not voted for PP. This is problematic as I will explain afterwards.
+
+
+
+spain_df$election_winner <- factor(spain_df$election_winner) #making it a factor variable
+
+#gprogramming ender variable. Dummy-type
+spain_df <- spain_df %>%
+  mutate(f_gender=factor(case_when(gndr==1 ~ "0-Male",
+                                       gndr==2 ~ "1-Female")))
+
+#making a categorical region variable which clearly states the names 
+spain_df<-spain_df %>% 
+  mutate(f_region=factor(case_when(region=="ES11"~"Galicia",
+                                   region=="ES12"~"Principado de Asturias", 
+                                   region=="ES13"~"Cantabria",
+                                   region=="ES21"~"País Vasco",
+                                   region=="ES22"~"Comunidad Foral de Navarra",
+                                   region=="ES23"~"La Rioja",
+                                   region=="ES24"~"Aragón",
+                                   region=="ES30"~"Comunidad de Madrid",
+                                   region=="ES41"~"Castilla y León",
+                                   region=="ES42"~"Castilla-La Mancha",
+                                   region=="ES43"~"Comunidad Valencia",
+                                   region=="ES51"~"Cataluña",
+                                   region=="ES52"~"Comunidad de Valencia",
+                                   region=="ES53"~"Illes Balears",
+                                   region=="ES61" ~ "Andalucia",
+                                   region=="ES62" ~ "Región de Murcia",
+                                   region=="ES63"~ "Ciudad Autónoma de Ceuta",
+                                   region=="ES64" ~ "Ciudad Autónoma de Melilla",
+                                   region=="ES70" ~ "Canarias")))
+  
+spain_df$f_region<-relevel(spain_df$f_region,ref="Galicia") #setting Galicia as the baseline
+
+##
+#Running the models
+
+model_1 <- lm(trstplt ~ factor(d_exposure_barcenas), spain_df )
+
+model_2 <- lm(trstplt ~ factor(d_exposure_barcenas) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region, spain_df )
+
+model_3 <- lm(trstplt ~ factor(d_exposure_barcenas)*factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region, spain_df )
+
+#a stargazer that shows the models. We omit the specific coefficient for the regions and add a line when this are considered or not.
+stargazer(model_1,model_2, model_3, type= "text",
+          title = "Table 2. OLS regression models. Dependent variable: trust in politicians.", 
+          order = c(1, 2, 10, 3, 4, 5, 6, 9, 8, 7),
+          covariate.labels = c("D (Exposure to the Bárcenas scandal)", "Election winner", "Female", "Years of education", "Age", "In education", "Unemployed", "Out of the labour market", "Other", "Election winner*D"),
+          dep.var.labels.include = FALSE,
+          column.labels = c("Model 1", "Model 2", "Model 3"),
+          omit.stat = c("f", "ser", "adj.rsq"),
+          omit = "f_region",
+          add.lines = list(c("Region Fixed effects", "No", "Yes","Yes")))
+
+
+
+## same models but with alternative election winner
+
+model_2_alt <- lm(trstplt ~ factor(d_exposure_barcenas) + factor(election_winner_alt) + f_gender + eduyrs + agea + f_employment + f_region, spain_df ) #the estimates stop being significant
+
+model_3_alt <- lm(trstplt ~ factor(d_exposure_barcenas)*factor(election_winner_alt) + f_gender + eduyrs + agea + f_employment + f_region, spain_df ) #the estimates stop being significant
+
+```
+## Figure 2. Change in trust in politicians at the time of the Bárcenas scandal.
+
+<div class = "answer">
+
+In the original paper, Figure 2 pictures two things in the same graph. First, an histogram of how many individuals responded the survey since the case was brought out of the light. The X axis is a time variable of the number of days, while the Y axis is the density.  The second image of the figure is a regression discontinuity that shows how trust in politicians seriously diminished after the case appeared. The abscissa are the same than before, while the vertical axis is trust. </br>
+
+In this replication paper, I have decided to separate both figures due to the impracticality of showing such different concepts in the same graph, which makes it confusing for the reader. Therefore, I render two graphs, 2a and 2b as shown below. 
+
+</div>
+
+### Figure 2a
+
+```{r}
+
+#Creating figure 2a- the histogram
+
+#First I need to create a time variable. It considers the number of days and makes NULL all individuals which also had a null exposure to the case.  For those not exposed to the case, I adjust by 31 days. 
+spain_df <- spain_df %>%
+  mutate(time_var=ifelse(is.na(d_exposure_barcenas),NA,inwdds))%>%
+  mutate(time_var=ifelse(d_exposure_barcenas==0, time_var-31,time_var))%>%
+  mutate(time_var=ifelse(time_var==31, 0, time_var)) %>%
+  mutate(time_var=as.numeric(time_var)) 
+
+ggplot(spain_df,aes(x=time_var, y=..density..))+
+  geom_histogram(binwidth = 1, color = "darkgrey", fill = "lightgrey") +
+     labs(title = "Figure 2a: Density of respondents since \n days of corruption scandal", 
+          x = "Days to/since scandal (0= January 31)",
+       y = "Density/Number of respondents") + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor.x = element_blank())
+
+```
+<div class = "answer">
+
+Figure 2a shows that the density of respondents of the survey behave like waves - there is some seasonality. The spike of answers is around 7 days after the scandal. The overall trend is that the density fades away slowly after January 31st.
+
+</div>
+
+### Figure 2b
+
+```{r}
+
+#Creating figure 2b - discontinuity plot
+
+#getting rid of NAs before estimating the polynomial
+spain_df_2 <-spain_df[!is.na(spain_df$trstplt),] 
+spain_df_2 <-spain_df_2[!is.na(spain_df_2$time_var),]
+
+#the original graphs estimates a polynomial for those not exposed and those exposed. Therefore I separate them in two dataframes
+
+tt<-spain_df_2%>%
+   filter(d_exposure_barcenas==1)
+ 
+cc<-spain_df_2%>%
+   filter(d_exposure_barcenas==0)
+
+#I calculate the polynomial for each group with a bandwith of two  
+aa<-locpoly(tt$time_var,tt$trstplt, bandwidth = 2)
+bb<-locpoly(cc$time_var,cc$trstplt, bandwidth = 2)
+
+#In order to plot the result I create a new dataframe with the predictions of both models and join them
+  
+aa_df<-as.data.frame(aa)
+bb_df<-as.data.frame(bb)
+  
+aa_df$treatment<-1
+bb_df$treatment<-0
+  
+fig2_df<-rbind(aa_df,bb_df)
+
+#With the predictions it is possible to graph the results
+ 
+fig2_df%>%
+   ggplot(aes(x=x,
+          y=y,
+          col=factor(treatment))) +
+     geom_smooth(aes(x = x, y = y, color = as.factor(treatment)))+
+     scale_x_continuous(name = "Days to/since scandal (Jan 31 = 0)") +
+     scale_colour_discrete(labels=c(" Trust in Politicians (D=0) ", " Trust in Politicians (D=1) "))+
+     scale_color_manual(values=c("firebrick","darkgreen")) +
+      theme(legend.title=element_blank(), legend.position = "bottom")+
+     labs(title = "Figure 2b: Change in trust in Politicians \n at Time of Bárcenas scandal", 
+       caption = "Note: Trust in politicians is measured on a 0-10 scale, where 10 indicates complete trust.") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor.x = element_blank())
+
+```
+<div class = "answer">
+
+As can be seen in Figure 2b there is a clear discontinuity after the scandal appears. Trust in politicians diminishes 0.5 points, a very similar estimate that the one shown in table 2. This discontinuity points to a possible causal effect of the corruption scandal in trust.  It is important to say as well that the graph does not resembles exactly the one of the paper. A possible explanation is the way the polynomial was estimated in each of the software used (R against Stata).
+
+</div>
+
+## Figure 3. Change in the treatment effect over time.
+
+<div class = "answer">
+
+The aim of figure 3 is showing how the exposure to the Barcenas case become less severe as time passes by. This is done by leaving constant the group considered as not exposed (those before January 31)  but adjusting who is considered treated by expanding it gradually. This is, the first 'tier' the treated are only those one week after the exposure; the second 'tier' adds those five days later; and so on.  The regressions considered are the same that those in model 2 above. 
+
+</div>
+
+```{r}
+
+#Building figure 3
+
+#to define the different groups I need first a variable that works as a date 
+spain_df<-spain_df%>%
+  mutate(date_t=make_date(year=2013,inwmms,inwdds))
+
+
+#the first part is to define the different tier groups. The first group is crucial. It assigns a zero to all of those before february 6 and an NA afterwards. The NA is so the lm regression automatically drops all individuals out of the group. TIn particular, this step is crucial for all the next to work correctly.
+
+spain_df<-spain_df%>%
+  mutate(week_1=ifelse(date_t<=as.Date("2013-02-6"),0,NA))
+
+#adjust so that the first week is 1 (treated)
+
+spain_df<-spain_df%>%
+  mutate(week_1=ifelse(date_t>=as.Date("2013-01-31") & date_t<=as.Date("2013-02-6"),1,week_1))
+
+#taking week 1 as the baseline, then I add all those of the following 5 days. I do this repeatedly until May 12
+
+spain_df<-spain_df%>%
+  mutate(week_2=week_1)%>%
+  mutate(week_2=ifelse(date_t>=as.Date("2013-02-7") & date_t<=as.Date("2013-02-11"),1,week_2))
+  
+  spain_df<-spain_df%>%
+  mutate(week_3=week_2)%>%
+  mutate(week_3=ifelse(date_t>=as.Date("2013-02-12") & date_t<=as.Date("2013-02-16"),1,week_3))
+
+ spain_df<-spain_df%>%
+  mutate(week_4=week_3)%>%
+  mutate(week_4=ifelse(date_t>=as.Date("2013-02-17") & date_t<=as.Date("2013-02-21"),1,week_4))
+
+ 
+  spain_df<-spain_df%>%
+  mutate(week_5=week_4)%>%
+  mutate(week_5=ifelse(date_t>=as.Date("2013-02-22") & date_t<=as.Date("2013-02-26"),1,week_5))
+ 
+spain_df<-spain_df%>%
+  mutate(week_6=week_5)%>%
+  mutate(week_6=ifelse(date_t>=as.Date("2013-02-27") & date_t<=as.Date("2013-03-3"),1,week_6))
+  
+  spain_df<-spain_df%>%
+  mutate(week_7=week_6)%>%
+  mutate(week_7=ifelse(date_t>=as.Date("2013-03-4") & date_t<=as.Date("2013-03-8"),1,week_7))
+  
+  spain_df<-spain_df%>%
+  mutate(week_8=week_7)%>%
+  mutate(week_8=ifelse(date_t>=as.Date("2013-03-9") & date_t<=as.Date("2013-03-13"),1,week_8))
+  
+  
+   spain_df<-spain_df%>%
+  mutate(week_9=week_8)%>%
+  mutate(week_9=ifelse(date_t>=as.Date("2013-03-14") & date_t<=as.Date("2013-03-18"),1,week_9))
+  
+     spain_df<-spain_df%>%
+  mutate(week_10=week_9)%>%
+  mutate(week_10=ifelse(date_t>=as.Date("2013-03-19") & date_t<=as.Date("2013-03-23"),1,week_10))
+   
+    spain_df<-spain_df%>%
+  mutate(week_11=week_10)%>%
+  mutate(week_11=ifelse(date_t>=as.Date("2013-03-24") & date_t<=as.Date("2013-03-28"),1,week_11))
+     
+     spain_df<-spain_df%>%
+  mutate(week_12=week_11)%>%
+  mutate(week_12=ifelse(date_t>=as.Date("2013-03-29") & date_t<=as.Date("2013-04-2"),1,week_12))
+     
+     
+          spain_df<-spain_df%>%
+  mutate(week_13=week_12)%>%
+  mutate(week_13=ifelse(date_t>=as.Date("2013-04-3") & date_t<=as.Date("2013-04-7"),1,week_13))
+     
+   
+   spain_df<-spain_df%>%
+  mutate(week_14=week_13)%>%
+  mutate(week_14=ifelse(date_t>=as.Date("2013-04-8") & date_t<=as.Date("2013-04-12"),1,week_14))
+  
+   
+   spain_df<-spain_df%>%
+  mutate(week_15=week_14)%>%
+  mutate(week_15=ifelse(date_t>=as.Date("2013-04-13") & date_t<=as.Date("2013-04-17"),1,week_15))
+   
+   spain_df<-spain_df%>%
+  mutate(week_16=week_15)%>%
+  mutate(week_16=ifelse(date_t>=as.Date("2013-04-18") & date_t<=as.Date("2013-04-22"),1,week_16))
+   
+     spain_df<-spain_df%>%
+  mutate(week_17=week_16)%>%
+  mutate(week_17=ifelse(date_t>=as.Date("2013-04-23") & date_t<=as.Date("2013-04-27"),1,week_17))
+   
+   spain_df<-spain_df%>%
+  mutate(week_18=week_17)%>%
+  mutate(week_18=ifelse(date_t>=as.Date("2013-04-28") & date_t<=as.Date("2013-05-2"),1,week_18))
+   
+   spain_df<-spain_df%>%
+  mutate(week_19=week_18)%>%
+  mutate(week_19=ifelse(date_t>=as.Date("2013-05-3") & date_t<=as.Date("2013-05-7"),1,week_19))
+     
+   
+   spain_df<-spain_df%>%
+  mutate(week_20=week_19)%>%
+  mutate(week_20=ifelse(date_t>=as.Date("2013-05-8") & date_t<=as.Date("2013-05-12"),1,week_20))
+   
+   spain_df<-spain_df%>%
+  mutate(week_21=week_20)%>%
+  mutate(week_21=ifelse(date_t>=as.Date("2013-05-13") & date_t<=as.Date("2013-05-17"),1,week_21))
+   
+   spain_df<-spain_df%>%
+  mutate(week_22=week_21)%>%
+  mutate(week_22=ifelse(date_t>=as.Date("2013-05-18") & date_t<=as.Date("2013-05-22"),1,week_22))
+   
+
+#Using the variables above as a type of dummy of who is treated or not, I run all the different regressions   
+   
+reg1<-lm(trstplt ~ factor(week_1) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+   
+reg2<-lm(trstplt ~ factor(week_2) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+   
+reg3<-lm(trstplt ~ factor(week_3) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg4<-lm(trstplt ~ factor(week_4) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg5<-lm(trstplt ~ factor(week_5) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg6<-lm(trstplt ~ factor(week_6) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg7<-lm(trstplt ~ factor(week_7) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg8<-lm(trstplt ~ factor(week_8) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg9<-lm(trstplt ~ factor(week_9) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg10<-lm(trstplt ~ factor(week_10) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg11<-lm(trstplt ~ factor(week_11) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg12<-lm(trstplt ~ factor(week_12) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg13<-lm(trstplt ~ factor(week_13) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg14<-lm(trstplt ~ factor(week_14) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg15<-lm(trstplt ~ factor(week_15) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg16<-lm(trstplt ~ factor(week_16) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg17<-lm(trstplt ~ factor(week_17) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg18<-lm(trstplt ~ factor(week_18) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg19<-lm(trstplt ~ factor(week_19) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+  
+reg20<-lm(trstplt ~ factor(week_20) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg21<-lm(trstplt ~ factor(week_21) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+reg22<-lm(trstplt ~ factor(week_22) + factor(election_winner) + f_gender + eduyrs + agea + f_employment + f_region,spain_df)
+
+
+#I create three vectors, one with the cutting dates, other with the coefficients of the regressions above (copy-paste), and a third with the p-values
+
+dates_1<-c("2013-02-6","2013-02-11","2013-02-16","2013-02-21","2013-02-26","2013-03-3","2013-03-8","2013-03-13","2013-03-18","2013-03-23","2013-03-28","2013-04-2","2013-04-7","2013-04-12","2013-04-17","2013-04-22","2013-04-27","2013-05-2","2013-05-7","2013-05-12")
+
+
+coefficients<-c(-0.504946,-0.411644,-0.469458,-0.428654,-0.444958,-0.453418,-0.412908,-0.393437,-0.384539,-0.3823645,-0.370973,-0.383508,-0.400595,-0.376424,-0.356314,-0.355566,-0.333241,-0.323777,-0.317159,-0.324026)
+
+p_values<-c(0.0211,0.0299,0.00779,0.01367,0.00880,0.00700,0.00504,0.008091,0.02380,0.023952,0.029099,0.023821,0.01757,0.02517,0.03383,0.03374,0.04690,0.05352,0.058475,0.052639)
+
+##to use ggplot I need a dataframe. The vectors must be numeric too.
+
+figure_3_a<-cbind(dates_1,coefficients,p_values)
+
+figure3_df<-as.data.frame(figure_3_a)
+
+figure3_df$dates_2<-as.Date(figure3_df$dates_1)
+
+figure3_df$coefficients_y<-as.numeric(figure3_df$coefficients)
+
+#this will allow me to change color and type of point
+
+figure3_df$significant<-ifelse(figure3_df$p_values<=.05,1,0)
+
+#I graph each coefficient accordingly
+
+#the dates shown do not match exactly with those shown in the original paper, although the same are used
+
+ggplot(figure3_df, aes(x = dates_2, 
+                y= coefficients_y, group=1)) +
+  geom_line(color="light gray") +
+   geom_point(aes(color=as.factor(significant)), shape=19 , size=2, show.legend = FALSE) +
+  scale_color_manual(values = c("dark gray", "black")) +
+  theme(legend.position = "bottom") +
+   xlim(as.Date("2013-02-6"),as.Date("2013-05-22"))+
+    scale_x_date(date_breaks = "2 day", date_labels ="%b %d") +
+    scale_y_reverse()+
+  ylim(-0.2,-0.6)+
+    theme(axis.text.x = element_text(size=4)) +
+  theme(axis.text.x = element_text(angle = 45))+
+  labs(title = "Figure 3. Change in the treatment effect over time.",
+       x = "Last day in treated group",
+       y = "Treatment effect (coefficient D)",
+       caption = "Note: the x-axis indicates the last day included in the treatment group.  \n Round markers with black filling denote coefficients that are statistically significant at least at p<0.05.\n Round makers with dark gray filling denote coefficients that are not statistically significant.")  + 
+  theme(plot.caption = element_text(size = 6)) + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor.x = element_blank())
+  
+
+
+
+```
+
+
+<div class = "answer">
+
+The figure clearly shows how, in spite of the ups and downs, the trend of the effect of corruption on political trust is that it wanes after some time. In fact for the last three weeks the coefficients are not significant any more.  
+
+</div>
+
+## Table A9 
+
+<div class = "answer">
+
+The hypothesis of how the exposure of relevant salient corruption scandals affects trust is also tested by running a series of robust regression discontinuities. On these,the standard errors are clustered by regions as a way to reduce the variance.Also different bandwidths around the cut-off are used as to define the discontinuity sample.  In this respect, differently that on the original paper, I defined the bandwidth for model 18 of three (3) instead of 2.164, due to the impossibility of calculating it as in the original with R.  
+
+</div>
+
+
+```{r message=FALSE, warning=FALSE }
+
+
+
+
+#rd robust for models 17,18,19
+model_17_a9 <- rdrobust::rdrobust(spain_df$trstplt, 
+                          spain_df$time_var,  
+                          c = 0,
+                          kernel = "tri",
+                          h = 4.329,
+                          cluster=spain_df$f_region)
+
+
+
+model_18_a9 <- rdrobust::rdrobust(spain_df$trstplt, 
+                          spain_df$time_var,  
+                          c = 0,
+                          kernel = "tri",
+                          h = 3, #2.164
+                          cluster=spain_df$region)
+
+
+
+model_19_a9 <- rdrobust::rdrobust(spain_df$trstplt, 
+                          spain_df$time_var,  
+                          c = 0,
+                          kernel = "tri",
+                          h = 8.657,
+                          cluster=spain_df$region)
+
+
+#I build a table similar to the paper by creating vectors in which I save the coefficients and later make them one dataframe
+titles<-c("Model 17", "Model 18","Model 19")
+estimates<-c(model_17_a9[1]$Estimate[1],model_18_a9[1]$Estimate[1],model_19_a9[1]$Estimate[1])
+p_vs<-c(model_17_a9$pv[1],model_18_a9$pv[1],model_19_a9$pv[1])
+standard_errors<-c(model_17_a9[1]$Estimate[3],model_18_a9[1]$Estimate[3],model_19_a9[1]$Estimate[3])
+bandwidths<-c(4.329,3,8.657)
+kernels<-c("Triangular","Triangular","Triangular")
+observations<-c(1414,1414,1414)
+
+estimates<-round(estimates,3)
+standard_errors<-round(standard_errors,3)
+
+significance<-round(p_vs,3)
+
+table_a9<-rbind(estimates,significance,standard_errors,bandwidths,kernels,observations)
+
+table_a9_df<-as.data.frame(table_a9)
+
+names(table_a9_df)[names(table_a9_df) == "V1"] <- "Model 17"
+names(table_a9_df)[names(table_a9_df) == "V2"] <- "Model 18"
+names(table_a9_df)[names(table_a9_df) == "V3"] <- "Model 19"
+
+# Kable table for RDD estimation
+table_a9_df %>%
+  kable(caption="Table A9: RDD summary results. Dependent variable: Trust in politicans", align = "c") %>%
+  kable_styling() %>%
+  footnote(general = "Standard error clustered by region")
+
+
+
+
+```
+
+
+<div class = "answer">
+
+Although the coefficients are the same than in the original table (except for model 18 as explained above), Table A9 differs from the original also in the p values of each of the models. On the paper, the significance of each of the estimates is least lower that .01, however on this replication each of them is greater than 0.05.  
+
+</div>
+
+
+# Extension 
+
+## Overall strategy
+
+<div class = "answer">
+
+On this section, I will focus on two steps. First, by replicating figure 3, but with coefficients estimated via matching. Secondly, by estimating the effect of exposure to the Barcenas case on trust through a difference in difference model. </br>
+
+The underlying logic to run a matching model is that the original model, as the paper states, may have "systematic differences in trust that are unrelated to the treatment." To control for this, the authors run a balance test of the covariates and include them on the lineal regressions. However, even if this is taken into account, it is important to note that the treatment group and the control group may be fundamentally different, which would violate the ignorability assumption. </br>
+
+In this regard, matching seems as a better strategy to control for this fundamental differences. The idea is to estimate how different is trust in politicians in those that have been exposed to the corruption case in contrast with those that have not. To do this, I estimated a propensity score matching of the probability, given the covariates, of being exposed to the case. This makes sense since reading news and being interested in politics usually depends on the type of individual (such as age, education or type of employment). As I will explain below, this strategy reveals the impossibility of comparing the two groups since they are fundamentally different </br>
+
+The second part of the extension considers that trust in politicians may have have a trend <i> per se </i> that may change after the Barcenas corruption case happens. This way, I measure the causal effect of the the corruption scandal on trust in politicians. To estimate this trend, I add data found on the ESS 5 database to those in the ESS 6 database. Afterwards, I change my object of study from human beings to regions (the new individuals) since this is the only way to observe them before and after the exposure to the case. In order to define who are treated and who are not I randomly assigned them using a randomization function, as a way to guarantee the ignorability assumption (I assume that each region has the same potential outcomes). Overall, the result is not significant as I will explain later. 
+
+
+</div>
+
+## Matching 
+
+```{r, fig.show='hide'}
+##Estimating the matching model
+##the methodology I follow is the same than on figure 3 but using the match it function
+
+#### week 1 ####
+
+match_data_1 <- spain_df %>% 
+  dplyr::select(week_1, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_1 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_1)
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_1 <- lm(week_1 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 2 ####
+
+match_data_2 <- spain_df %>% 
+  dplyr::select(week_2, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_2 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_2)
+
+plot(one_match, type = "hist")
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_2 <- lm(week_2 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+
+#### week 3 ####
+
+match_data_3 <- spain_df %>% 
+  dplyr::select(week_3, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_3 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_3)
+
+plot(one_match, type = "hist")
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_3 <- lm(week_3 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+
+#### week 4 ####
+
+match_data_4 <- spain_df %>% 
+  dplyr::select(week_4, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_4 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_4)
+
+plot(one_match, type = "hist")
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_4 <- lm(week_4 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 5 ####
+
+match_data_5 <- spain_df %>% 
+  dplyr::select(week_5, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_5 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_5)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_5 <- lm(week_5 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 6 ####
+
+
+match_data_6 <- spain_df %>% 
+  dplyr::select(week_6, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_6 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_6)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_6 <- lm(week_6 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+
+#### week 7 ####
+
+match_data_7 <- spain_df %>% 
+  dplyr::select(week_7, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_7 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_7)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_7 <- lm(week_7 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 8 ####
+
+match_data_8 <- spain_df %>% 
+  dplyr::select(week_8, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_8 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_8)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_8 <- lm(week_8 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 9 ####
+
+match_data_9 <- spain_df %>% 
+  dplyr::select(week_9, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_9 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_9)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_9 <- lm(week_9 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 10 ####
+
+match_data_10 <- spain_df %>% 
+  dplyr::select(week_10, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_10 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_10)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_10 <- lm(week_10 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 11 ####
+
+match_data_11 <- spain_df %>% 
+  dplyr::select(week_11, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_11 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_11)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_11 <- lm(week_11 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+#### week 12 ####
+
+match_data_12 <- spain_df %>% 
+  dplyr::select(week_12, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_12 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_12)
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_12 <- lm(week_12 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 13 ####
+
+match_data_13 <- spain_df %>% 
+  dplyr::select(week_13, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_13 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_13)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_13 <- lm(week_13 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+#### week 14 ####
+
+match_data_14 <- spain_df %>% 
+  dplyr::select(week_14, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_14 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_14)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_14 <- lm(week_14~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 15 ####
+
+match_data_15 <- spain_df %>% 
+  dplyr::select(week_15, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_15 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_15)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_15 <- lm(week_15~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+#### week 16 ####
+
+match_data_16 <- spain_df %>% 
+  dplyr::select(week_16, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_16 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_16)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_16 <- lm(week_16~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+#### week 17 ####
+
+match_data_17 <- spain_df %>% 
+  dplyr::select(week_17, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_17 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_17)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_17 <- lm(week_17~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+#### week 18 ####
+
+match_data_18 <- spain_df %>% 
+  dplyr::select(week_18, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_18 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_18)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_18 <- lm(week_18~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+#### week 19 ####
+
+match_data_19 <- spain_df %>% 
+  dplyr::select(week_19, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_19 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_19)
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_19<- lm(week_19~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+
+
+
+#### week 20 ####
+
+match_data_20 <- spain_df %>% 
+  dplyr::select(week_20, election_winner, f_gender,eduyrs,agea, f_employment, f_region) %>% 
+  na.omit() 
+
+one_match <- MatchIt::matchit(week_20 ~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region,
+                              method = "nearest", 
+                              ratio = 1, 
+                              replace = TRUE,
+                              data = match_data_20)
+
+
+
+data_prop_match <- MatchIt::match.data(one_match)
+
+prop_match_model_20<- lm(week_20~ election_winner + f_gender+ eduyrs + agea + f_employment + f_region, data = data_prop_match)
+```
+
+```{r}
+
+#### summaries ###
+
+coefs<-c(-0.0088243,-0.0141559,0.0072789,0.0098575,-0.0148288,-0.0115197,-0.0118925,-0.0060710, 0.0004519, -0.0121627, -1.276e-02,-0.0132370,-5.097e-05,-0.0012624,-0.0014203,-0.0113131 -0.0196928, -0.0048795, -.001352,-0.0089181)
+
+p_v<-c(0.86261,0.66982,0.782761,0.658285,0.465184,0.55902,0.525282, 0.739299, 0.979775, 0.490538, 0.447694, 0.431139, 0.997544,0.938493,0.929386,0.479559,0.219288, 0.75940,0.39078, 0.57260)
+
+
+figure_matching<-cbind(dates_1,coefs,p_v)
+
+figure_matching_df<-as.data.frame(figure_matching)
+
+figure_matching_df$dates_2<-as.Date(figure_matching_df$dates_1)
+
+figure_matching_df$coefs<-as.numeric(figure_matching_df$coefs)
+
+figure_matching_df$p_v<-as.numeric(figure_matching_df$p_v)
+
+figure_matching_df$significant_1<-ifelse(figure_matching_df$p_v<=.05,1,0)
+
+figure_matching_df$significant_2<-ifelse(figure_matching_df$p_v<=.10 & figure_matching_df$p_v>.05,1,0)
+
+
+ggplot(figure_matching_df, aes(x = dates_2, 
+              y= coefs, group=1)) +
+geom_line(color="light gray") +
+geom_point(aes(color=p_v),shape=19 , size=2, show.legend = TRUE) + 
+ theme(legend.position = "bottom") +
+ scale_x_date(date_breaks = "2 day", date_labels ="%b %d")+ 
+   scale_y_reverse()+
+ theme(axis.text.x = element_text(size=4)) +
+theme(axis.text.x = element_text(angle = 45)) +
+labs(title = "ExtensionFigure 1. Change in the treatment effect over time.\n  Coefficients via matching",
+ x = "Last day in treated group",
+ y = "Treatment effect (coefficient D)",
+ col = "P-Values of coefficients") +
+theme(plot.caption = element_text(size = 6)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor.x = element_blank())
+```
+### Discussion
+
+<div class = "answer">
+
+Extension Figure 1 above shows that the coefficients for each of the regressions run on Figure 3 is not significant when doing them by a regression model. This might likely be due to the fundamental differences between the two types of groups which makes their comparison hardly possible. However, if we consider that the matching is done successfully it seems that the exposure to the Barcenas case is not significant at all in any moment.  
+
+</div>
+
+## Difference in differences 
+
+
+```{r}
+
+Z <- simple_ra(N = 18) #randomization vector for all regions
+
+ess_5<-haven::read_dta("ESS5e03.4_F1.dta") #I load ESS 5 data 
+
+spain_ess_5 <- ess_5 %>%
+  filter(cntry=="ES") # I use only those individuals/regions that are in spain
+
+spain_ess_5 <-spain_ess_5 %>%
+  mutate(d_exposure_barcenas=0)  #i consider that the whole survey was not exposed to the case
+
+spain_ess_5<-spain_ess_5 %>%
+  mutate(number_ISS=5)  #this will help later identify were data comes from
+
+
+spain_ess_5<-spain_ess_5%>%
+  mutate(date_t=make_date(year=inwyye,inwmms,inwdds)) #i create a time variable in this database
+
+spain_df<-spain_df %>%
+  mutate(number_ISS=6) %>%
+  mutate(d_exposure_barcenas=week_20)  #i consider in the ESS 6 all after Jan 31 as exposed and before as control
+
+
+spain_df_selected<-spain_df %>%
+  select(trstplt,date_t,d_exposure_barcenas,number_ISS,region)  #i select only some variables of interest of ESS 6
+
+spain_ess_5_selected<-spain_ess_5%>%
+  select(trstplt,date_t,d_exposure_barcenas,number_ISS,region) # i select only some variables of interest of ESS 5
+
+new_df<- bind_rows(spain_ess_5_selected,spain_df_selected) # I create a new dataframe with both variables of interest of ESS 5 and 6
+
+
+trust_by_region<-new_df %>% 
+   group_by(region,d_exposure_barcenas) %>%
+  summarize(Mean = mean(trstplt, na.rm=TRUE))  #I group by region, as to have the mean of trust before exposure to the case and after exposure to the case
+
+ZZ<-c(rbind(Z,Z))  #this is done so the region after and before the exposure is assigned to the same treatment status
+
+trust_by_region$treat<-ZZ #I add the vector to the data frame. This way is possible to see who is treated or not
+
+did_long <- lm(Mean~ treat+ d_exposure_barcenas + treat*d_exposure_barcenas, data = trust_by_region) #estimation of the model 
+
+stargazer(did_long, type="text",
+          title= "Replication Table 1. Difference in difference. Dependent:variable: trust in politicians",
+          covariate.labels=c("Treatment","D (Exposure to the Bárcenas scandal)","Treatment x Exposure to the scandal", "Constant"))
+
+
+
+```
+
+### Discussion
+
+<div class = "answer">
+
+The Extension Table above shows that trust in politicians is only influenced by exposure to the barcenas case and that this is holds true for all regions. In fact the estimates are are not far behind to the original ones shown in Model 1 of the paper.   Interestingly the coefficients that model the difference in difference model (treatment and the interaction  exposure to the scandal), are not significant, which may mean that this type of modelling does not make sense in this context.
+
+</div>
+
+# Bibliography
+
+*The analysis was run under a macOS Mojave Version 10.16.6  using R studio Version 1.4.1106.* 
+
+* Alexander Coppock (2019). randomizr: Easy-to-Use Tools for Common Forms of Random
+  Assignment and Sampling. R package version 0.20.0.
+  https://CRAN.R-project.org/package=randomizr
+  
+* Bjørnskov, C. (2007). Determinants of generalized trust: A cross-country comparison. Public choice, 130(1-2), 1-21.
+
+* Daniel E. Ho, Kosuke Imai, Gary King, Elizabeth A. Stuart (2011). MatchIt:
+  Nonparametric Preprocessing for Parametric Causal Inference. Journal of
+  Statistical Software, Vol. 42, No. 8, pp. 1-28. URL
+  https://www.jstatsoft.org/v42/i08/
+  
+* ESS Round 7: European Social Survey Round 7 Data (2014). Data file edition 2.2. NSD - Norwegian Centre for Research Data, Norway – Data Archive and distributor of ESS data for ESS ERIC. doi:10.21338/NSD-ESS7-2014.
+
+* ESS Round 6: European Social Survey Round 6 Data (2012). Data file edition 2.4. NSD - Norwegian Centre for Research Data, Norway – Data Archive and distributor of ESS data for ESS ERIC. doi:10.21338/NSD-ESS6-2012.
+
+* ESS Round 5: European Social Survey Round 5 Data (2010). Data file edition 3.4. NSD - Norwegian     Centre for Research Data, Norway – Data Archive and distributor of ESS data for ESS ERIC. doi:10.21338/NSD-ESS5-2010.
+
+* Garrett Grolemund, Hadley Wickham (2011). Dates and Times Made Easy with
+  lubridate. Journal of Statistical Software, 40(3), 1-25. URL
+  https://www.jstatsoft.org/v40/i03/.
+  
+* Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2020). dplyr: A
+  Grammar of Data Manipulation. R package version 1.0.2.
+  https://CRAN.R-project.org/package=dplyr
+  
+* Hadley Wickham and Evan Miller (2020). haven: Import and Export 'SPSS', 'Stata'
+  and 'SAS' Files. R package version 2.3.1. https://CRAN.R-project.org/package=haven
+  
+* Hadley Wickham and Jim Hester (2020). readr: Read Rectangular Text Data. R package
+  version 1.4.0. https://CRAN.R-project.org/package=readr
+  
+* Hlavac, Marek (2018). stargazer: Well-Formatted Regression and Summary Statistics
+  Tables. R package version 5.2.1. https://CRAN.R-project.org/package=stargazer
+  
+* Hao Zhu (2020). kableExtra: Construct Complex Table with 'kable' and Pipe Syntax.
+  R package version 1.3.1. https://CRAN.R-project.org/package=kableExtra
+  
+* H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York,2016.
+
+* Matt Wand (2020). KernSmooth: Functions for Kernel Smoothing Supporting Wand &
+  Jones (1995). R package version 2.23-18.
+  https://CRAN.R-project.org/package=KernSmooth
+  
+* Muñoz Mendoza, J., Falcó Gimeno, A., & Hernández, E. (2019). Unexpected event during surveys design: promise and pitfalls for causal inference. Political Analysis, 2019, vol. 28, num. 2, p. 186-206. http://www.ub.edu/polexp/wp-content/uploads/2019/07/Unexpected_Event_during_Surveys_Design__No_appendix.pdf
+
+* Yihui Xie (2020). knitr: A General-Purpose Package for Dynamic Report Generation
+  in R. R package version 1.30.
+
+* Yihui Xie (2015) Dynamic Documents with R and knitr. 2nd edition. Chapman and
+  Hall/CRC. ISBN 978-1498716963
+
+* Yihui Xie (2014) knitr: A Comprehensive Tool for Reproducible Research in R. In
+  Victoria Stodden, Friedrich Leisch and Roger D. Peng, editors, Implementing
+  Reproducible Computational Research. Chapman and Hall/CRC. ISBN 978-1466561595
+
+```{r include=FALSE}
+
+citation(package = "haven")
+citation(package = "readr")
+citation(package = "ggplot2")
+citation(package = "stargazer")
+citation(package = "dplyr")
+citation(package = "knitr")
+citation(package = "kableExtra")
+citation(package = "lubridate")
+citation(package = "MatchIt")
+citation(package = "randomizr")
+citation(package = "KernSmooth")
+
+
+
+
+```
+
+
+
